@@ -20,11 +20,16 @@ This project demonstrates a **"Fast-Path" parsing strategy**. Before resorting t
 
 ## 📂 Project Structure
 
+```text
 .
 ├── examples/           # Sample PDF invoices for testing
-├── main.py             # Core extraction logic
-├── LICENSE             # MIT License
-└── README.md           # Documentation
+├── output/             # Generated JSON/CSV reports (ignored by git)
+├── .gitignore
+├── main.py
+├── requirements.txt
+├── LICENSE
+└── README.md
+```
 
 ## 🚀 Getting Started
 
