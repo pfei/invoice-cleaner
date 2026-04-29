@@ -34,9 +34,11 @@ Ensure you have Python 3.8+ installed.
 ### 2. Installation
 Clone the repository and install the required dependencies:
 
+```bash
 git clone https://github.com/pierre-feilles/invoice-cleaner.git
 cd invoice-cleaner
 pip install pdfplumber
+```
 
 ### 3. Usage
 Run the main script to process the default example:
