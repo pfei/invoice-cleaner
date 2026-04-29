@@ -3,50 +3,70 @@ import re
 import pdfplumber
 
 
-def extract_amount(text):
+def extract_free(text):
     """
-    Search for the total amount after the 'Somme à payer' label.
-    Pattern: Matches decimal numbers followed by '€ TTC'.
+    Extracts data from Free SAS invoices.
     """
-    #
-    pattern = r"Somme à payer\s+([\d.]+)\s+€ TTC"
-    match = re.search(pattern, text)
-    return match.group(1) if match else None
+    amount_pat = r"Somme à payer\s+([\d.]+)\s+€ TTC"
+    date_pat = r"du (\d{2} \w+ \d{4})"
+
+    amount = re.search(amount_pat, text)
+    date = re.search(date_pat, text)
+
+    return {
+        "amount": amount.group(1) if amount else None,
+        "date": date.group(1) if date else None,
+    }
 
 
-def extract_date(text):
+def extract_aws(text):
     """
-    Search for the invoice date starting with 'du'.
-    Pattern: Matches 'DD Month YYYY'.
+    Extracts data from AWS invoices using flexible whitespace handling.
+    Note: AWS PDF extraction often includes a space before the comma in the date.
     """
-    #
-    pattern = r"du (\d{2} \w+ \d{4})"
-    match = re.search(pattern, text)
-    return match.group(1) if match else None
+    # Matches 'Total for this invoice' followed by anything until '$' and digits
+    amount_pat = r"Total for this invoice.*?\$([\d.]+)"
+
+    # Matches 'Invoice Date:' followed by 'Month Day , Year' (handles floating comma)
+    date_pat = r"Invoice Date:.*?([a-zA-Z]+\s+\d{1,2}\s*,\s+\d{4})"
+
+    amount = re.search(amount_pat, text, re.DOTALL | re.IGNORECASE)
+    date = re.search(date_pat, text, re.DOTALL | re.IGNORECASE)
+
+    return {
+        "amount": amount.group(1).strip() if amount else None,
+        "date": date.group(1).strip() if date else None,
+    }
 
 
 def main():
-    file_path = "examples/free-fiber-invoice.pdf"
+    file_paths = [
+        "examples/free-fiber-invoice.pdf",
+        "examples/AmazonWebServices-invoice.pdf",
+    ]
 
-    try:
-        with pdfplumber.open(file_path) as pdf:
-            # Extract text from all pages and merge[cite: 1]
-            full_text = "\n".join(
-                [page.extract_text() for page in pdf.pages if page.extract_text()]
-            )
+    for file_path in file_paths:
+        print(f"--- Processing: {file_path} ---")
+        try:
+            with pdfplumber.open(file_path) as pdf:
+                full_text = "\n".join(
+                    [page.extract_text() for page in pdf.pages if page.extract_text()]
+                )
 
-        # Business logic: extract specific fields
-        amount = extract_amount(full_text)
-        date = extract_date(full_text)
+            if "Free SAS" in full_text or "Somme à payer" in full_text:
+                data = extract_free(full_text)
+            elif "Amazon Web Services" in full_text or "AWS" in full_text:
+                data = extract_aws(full_text)
+            else:
+                data = {"amount": None, "date": None}
 
-        # Simple output
-        print(f"Amount: {amount}")
-        print(f"Date: {date}")
+            print(f"Amount: {data['amount']}")
+            print(f"Date: {data['date']}\n")
 
-    except FileNotFoundError:
-        print(f"Error: {file_path} not found.")
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
+        except FileNotFoundError:
+            print(f"Error: {file_path} not found.\n")
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}\n")
 
 
 if __name__ == "__main__":
