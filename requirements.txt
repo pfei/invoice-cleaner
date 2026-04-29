@@ -1,0 +1,2 @@
+pdfplumber==0.11.9
+dateparser==1.4.0
