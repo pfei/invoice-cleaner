@@ -81,33 +81,53 @@ def main():
     output_dir = "output"
     results = []
 
+    # Counters for UX feedback
+    stats = {"total": 0, "success": 0, "failed": 0}
+
     if not os.path.exists(input_dir):
+        print(f"Error: Directory '{input_dir}' not found.")
         return
 
-    for filename in os.listdir(input_dir):
-        if filename.endswith(".pdf"):
-            file_path = os.path.join(input_dir, filename)
+    # Discovery
+    pdf_files = [f for f in os.listdir(input_dir) if f.endswith(".pdf")]
+    stats["total"] = len(pdf_files)
 
-            try:
-                with pdfplumber.open(file_path) as pdf:
-                    full_text = "\n".join(
-                        [p.extract_text() for p in pdf.pages if p.extract_text()]
-                    )
+    for filename in pdf_files:
+        file_path = os.path.join(input_dir, filename)
 
-                if "Free SAS" in full_text or "Somme à payer" in full_text:
-                    data = extract_free(full_text)
-                elif "Amazon Web Services" in full_text or "AWS" in full_text:
-                    data = extract_aws(full_text)
-                else:
-                    data = {"amount": None, "date": None, "provider": "Unknown"}
+        try:
+            with pdfplumber.open(file_path) as pdf:
+                full_text = "\n".join(
+                    [p.extract_text() for p in pdf.pages if p.extract_text()]
+                )
 
-                data["file_source"] = filename
-                results.append(data)
+            if "Free SAS" in full_text or "Somme à payer" in full_text:
+                data = extract_free(full_text)
+            elif "Amazon Web Services" in full_text or "AWS" in full_text:
+                data = extract_aws(full_text)
+            else:
+                data = {"amount": None, "date": None, "provider": "Unknown"}
 
-            except Exception:
-                continue
+            data["file_source"] = filename
+
+            # Basic validation check for success count
+            if data["amount"] and data["date"]:
+                stats["success"] += 1
+            else:
+                stats["failed"] += 1
+
+            results.append(data)
+
+        except Exception:
+            stats["failed"] += 1
+            continue
 
     save_results(results, output_dir=output_dir)
+
+    # Minimalist UX Output
+    print(f"\nProcessed: {stats['total']} invoices")
+    print(f"Success: {stats['success']}")
+    print(f"Failed: {stats['failed']}")
 
 
 if __name__ == "__main__":
