@@ -3,8 +3,14 @@ invoice-cleaner — Fast-path PDF invoice data extractor.
 
 Extracts structured fields (amount, date, provider) from known invoice formats
 using regex-based heuristics. Outputs results as JSON and CSV.
+
+Usage:
+    poetry run python main.py
+    poetry run python main.py --input /path/to/invoices/
+    poetry run python main.py --input /path/to/invoices/ --output /path/to/results/
 """
 
+import argparse
 import csv
 import json
 import logging
@@ -68,6 +74,37 @@ def save_results(
 
 
 # ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Extract structured data from PDF invoices.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+examples:
+  python main.py
+  python main.py --input /path/to/invoices/
+  python main.py --input /path/to/invoices/ --output /path/to/results/
+        """,
+    )
+    parser.add_argument(
+        "--input",
+        default="examples",
+        metavar="DIR",
+        help="Directory containing PDF invoices (default: examples/)",
+    )
+    parser.add_argument(
+        "--output",
+        default="output",
+        metavar="DIR",
+        help="Directory for JSON/CSV results (default: output/)",
+    )
+    return parser.parse_args()
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 
@@ -77,8 +114,9 @@ def main() -> None:
     Discovers PDF invoices in the input directory, parses each one,
     and writes consolidated results to the output directory.
     """
-    input_dir = "examples"
-    output_dir = "output"
+    args = parse_args()
+    input_dir = args.input
+    output_dir = args.output
 
     if not os.path.isdir(input_dir):
         logger.error("Input directory '%s' not found.", input_dir)
