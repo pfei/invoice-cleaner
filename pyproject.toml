@@ -1,24 +1,25 @@
 [project]
 name = "invoice-cleaner"
-version = "0.0.1"
-description = ""
+version = "0.1.0"
+description = "Extract structured data from PDF invoices using regex-based heuristics — no AI required."
 authors = [
-    {name = "Pierre Feilles",email = "4628744+pfei@users.noreply.github.com"}
+    { name = "Pierre Feilles", email = "4628744+pfei@users.noreply.github.com" },
 ]
 license = "MIT"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = [
-    "pdfplumber (>=0.11.9,<0.12.0)",
-    "dateparser (>=1.4.0,<2.0.0)"
+keywords = ["invoice", "pdf", "parsing", "automation", "finance", "accounting"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Office/Business :: Financial",
+    "Topic :: Text Processing :: General",
 ]
-
+dependencies = ["pdfplumber (>=0.11.9,<0.12.0)", "dateparser (>=1.4.0,<2.0.0)"]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [dependency-groups]
-dev = [
-    "pytest (>=9.0.3,<10.0.0)"
-]
+dev = ["pytest (>=9.0.3,<10.0.0)"]
