@@ -9,13 +9,15 @@ import csv
 import json
 import logging
 import os
-import re
 import sys
 from dataclasses import asdict, dataclass
 from typing import Optional
 
-import dateparser
 import pdfplumber
+
+from src.invoice_cleaner.providers.aws import extract_aws
+from src.invoice_cleaner.providers.free import extract_free
+from src.invoice_cleaner.providers.ovh import extract_ovh
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -46,135 +48,6 @@ class InvoiceRecord:
     def is_valid(self) -> bool:
         """Returns True if all required fields were successfully extracted."""
         return self.amount is not None and self.date is not None
-
-
-# ---------------------------------------------------------------------------
-# Cleaning helpers
-# ---------------------------------------------------------------------------
-
-
-def clean_amount(amount_str: str) -> Optional[float]:
-    """
-    Converts a raw string amount to a float.
-
-    Handles both comma and dot decimal separators.
-
-    Args:
-        amount_str: Raw amount string (e.g. "29,99" or "1234.56").
-
-    Returns:
-        Parsed float, or None if conversion fails.
-    """
-    if not amount_str:
-        return None
-    try:
-        return float(amount_str.replace(",", ".").strip())
-    except ValueError:
-        logger.debug("Could not parse amount: %r", amount_str)
-        return None
-
-
-def clean_date(date_str: str) -> Optional[str]:
-    """
-    Normalizes a date string to ISO 8601 format (YYYY-MM-DD).
-
-    Relies on dateparser for locale-agnostic parsing.
-
-    Args:
-        date_str: Raw date string in any supported locale.
-
-    Returns:
-        ISO-formatted date string, or None if parsing fails.
-    """
-    if not date_str:
-        return None
-    dt = dateparser.parse(date_str)
-    if not dt:
-        logger.debug("Could not parse date: %r", date_str)
-        return None
-    return dt.strftime("%Y-%m-%d")
-
-
-# ---------------------------------------------------------------------------
-# Provider extractors
-# ---------------------------------------------------------------------------
-
-
-def extract_free(text: str) -> tuple[Optional[float], Optional[str]]:
-    """
-    Extracts amount and date from a Free SAS invoice.
-
-    Expected patterns:
-      - Amount: "Somme à payer  29,99 € TTC"
-      - Date:   "du 15 janvier 2024"
-
-    Args:
-        text: Full text content of the PDF.
-
-    Returns:
-        Tuple of (amount, iso_date).
-    """
-    amount_match = re.search(r"Somme à payer\s+([\d,.]+)\s+€ TTC", text)
-    date_match = re.search(r"du (\d{2} \w+ \d{4})", text)
-
-    return (
-        clean_amount(amount_match.group(1)) if amount_match else None,
-        clean_date(date_match.group(1)) if date_match else None,
-    )
-
-
-def extract_aws(text: str) -> tuple[Optional[float], Optional[str]]:
-    """
-    Extracts amount and date from an Amazon Web Services invoice.
-
-    Expected patterns:
-      - Amount: "Total for this invoice  $123.45"
-      - Date:   "Invoice Date: March 1, 2024"
-
-    Args:
-        text: Full text content of the PDF.
-
-    Returns:
-        Tuple of (amount, iso_date).
-    """
-    amount_match = re.search(
-        r"Total for this invoice.*?\$([\d.]+)", text, re.DOTALL | re.IGNORECASE
-    )
-    date_match = re.search(
-        r"Invoice Date:.*?([a-zA-Z]+\s+\d{1,2}\s*,\s+\d{4})",
-        text,
-        re.DOTALL | re.IGNORECASE,
-    )
-
-    return (
-        clean_amount(amount_match.group(1)) if amount_match else None,
-        clean_date(date_match.group(1)) if date_match else None,
-    )
-
-
-def extract_ovh(text: str) -> tuple[Optional[float], Optional[str]]:
-    """
-    Extracts amount and date from an OVH invoice.
-
-    Expected patterns:
-      - Amount: "Total TTC : 14,40 €"
-      - Date:   "Date de facturation : 01/03/2024"
-
-    Args:
-        text: Full text content of the PDF.
-
-    Returns:
-        Tuple of (amount, iso_date).
-    """
-    amount_match = re.search(r"Total TTC\s*[:\-]\s*([\d,.]+)\s*€", text, re.IGNORECASE)
-    date_match = re.search(
-        r"Date de facturation\s*[:\-]\s*(\d{2}/\d{2}/\d{4})", text, re.IGNORECASE
-    )
-
-    return (
-        clean_amount(amount_match.group(1)) if amount_match else None,
-        clean_date(date_match.group(1)) if date_match else None,
-    )
 
 
 # ---------------------------------------------------------------------------
