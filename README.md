@@ -1,65 +1,99 @@
-# Invoice Cleaner
+# invoice-cleaner
 
-A lightweight Python tool designed to extract structured data (amount, date) from PDF invoices using optimized regex patterns.
+> Extract structured data from PDF invoices — fast, no AI required.
 
-## ⚠️ Status
+![Python](https://img.shields.io/badge/python-3.13-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Tests](https://img.shields.io/badge/tests-37%20passed-brightgreen)
 
-This project is in early development (alpha stage).  
-API, structure and extraction rules are subject to change.
+A lightweight Python tool that parses PDF invoices from known providers (AWS, Free, OVH) and extracts structured fields — provider, amount, date — using regex heuristics. Results are exported as JSON and CSV.
 
-## 🎯 Purpose
+Built as a **"fast-path" alternative to AI-based extraction**: for well-structured invoice formats, regex runs in milliseconds and produces deterministic output.
 
-This project demonstrates a **"Fast-Path" parsing strategy**. Before resorting to complex AI models, `invoice-cleaner` uses high-performance heuristic extraction to process known invoice formats (like Free Telecom) in milliseconds.
+---
 
-## 🛠️ Features
+## Output example
 
-*   **Speed**: Near-instant extraction using `pdfplumber` and `re`.
-*   **Robustness**: Handles multi-page PDFs and text sanitization.
-*   **Extensibility**: Structured with modular functions to easily add new providers.
-*   **Open Data**: Includes sample invoices for immediate testing.
+```
+2026-05-11 [INFO] Found 3 PDF invoice(s) to process.
+2026-05-11 [INFO] ✓  AmazonWebServices-invoice.pdf   provider=AWS    amount=4.11   date=2014-08-03
+2026-05-11 [INFO] ✓  free-fiber-invoice.pdf           provider=Free   amount=29.99  date=2015-07-02
+2026-05-11 [WARNING] ⚠  invoice_Trudy Schmidt_14380.pdf  provider=Unknown — incomplete extraction
 
-## 📂 Project Structure
-
-```text
-.
-├── examples/           # Sample PDF invoices for testing
-├── output/             # Generated JSON/CSV reports (ignored by git)
-├── .gitignore
-├── main.py
-├── requirements.txt
-├── LICENSE
-└── README.md
+Processed : 3  |  Success : 2  |  Failed : 1
 ```
 
-## 🚀 Getting Started
+```json
+[
+  { "file_source": "AmazonWebServices-invoice.pdf", "provider": "AWS",  "amount": 4.11,  "date": "2014-08-03" },
+  { "file_source": "free-fiber-invoice.pdf",        "provider": "Free", "amount": 29.99, "date": "2015-07-02" }
+]
+```
 
-### 1. Prerequisites
-Ensure you have Python 3.8+ installed.
+---
 
-### 2. Installation
-Clone the repository and install the required dependencies:
+## Features
+
+- **Provider detection** — identifies AWS, Free, OVH from PDF text signatures
+- **Regex extraction** — amount and date parsed with targeted patterns per provider
+- **Date normalization** — any locale/format → ISO 8601 via `dateparser`
+- **Dual export** — JSON and CSV output in one run
+- **Extensible** — adding a new provider is one file + one line in the router
+- **Tested** — 37 unit tests across utils, core logic, and all provider extractors
+
+---
+
+## Project structure
+
+```
+invoice-cleaner/
+├── src/invoice_cleaner/
+│   ├── core.py          # PDF reading, provider detection, routing
+│   ├── models.py        # InvoiceRecord dataclass
+│   ├── utils.py         # Amount and date normalization
+│   └── providers/
+│       ├── aws.py
+│       ├── free.py
+│       └── ovh.py
+├── tests/               # pytest — 37 tests
+├── examples/            # Sample PDF invoices
+├── main.py              # CLI entry point
+└── pyproject.toml
+```
+
+---
+
+## Getting started
+
+**Requirements:** Python 3.13+, [Poetry](https://python-poetry.org/)
 
 ```bash
-git clone https://github.com/pierre-feilles/invoice-cleaner.git
+git clone https://github.com/pfei/invoice-cleaner.git
 cd invoice-cleaner
-pip install pdfplumber
+poetry install
+poetry run python main.py
 ```
 
-### 3. Usage
-Run the main script to process the default example:
+Results are written to `output/invoices_report.json` and `output/invoices_report.csv`.
 
-python main.py
+**Run the tests:**
 
-## 📊 Performance Logic
+```bash
+poetry run pytest tests/ -v
+```
 
-The script follows a deterministic extraction flow:
-1.  **Layout Analysis**: Extracts raw text while maintaining logical groupings.
-2.  **Regex Anchoring**: Locates financial data based on semantic anchors like "Somme à payer".
-3.  **Sanitization**: Cleans up formatting artifacts to return pure data (e.g., 29.99).
+---
 
-## 📜 Acknowledgments & License
+## Adding a new provider
 
-*   **Data Sources**: Some PDF samples in the `examples/` directory are sourced from the [invoice2data](https://github.com/invoice-x/invoice2data) project (MIT License).
-*   **License**: This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+1. Create `src/invoice_cleaner/providers/stripe.py` with an `extract_stripe(text)` function
+2. Add a detection signature in `core.py > detect_provider()`
+3. Register it in `core.py > _EXTRACTORS`
 
-Developed by **Pierre Feilles** (2026).
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE).  
+Developed by [Pierre Feilles](https://github.com/pfei) (2026).  
+Sample invoices from [invoice2data](https://github.com/invoice-x/invoice2data) (MIT).
