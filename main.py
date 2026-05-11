@@ -8,6 +8,7 @@ Usage:
     poetry run python main.py
     poetry run python main.py --input /path/to/invoices/
     poetry run python main.py --input /path/to/invoices/ --output /path/to/results/
+    poetry run python main.py --log-level DEBUG
 """
 
 import argparse
@@ -21,17 +22,6 @@ from dataclasses import asdict
 from src.invoice_cleaner.core import parse_invoice
 from src.invoice_cleaner.models import InvoiceRecord
 
-# ---------------------------------------------------------------------------
-# Logging
-# ---------------------------------------------------------------------------
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-logger = logging.getLogger(__name__)
-
 
 # ---------------------------------------------------------------------------
 # Output
@@ -43,14 +33,6 @@ def save_results(
     output_dir: str = "output",
     base_filename: str = "invoices_report",
 ) -> None:
-    """
-    Serializes a list of InvoiceRecord objects to JSON and CSV.
-
-    Args:
-        records:       List of extracted invoice records.
-        output_dir:    Target directory (created if it does not exist).
-        base_filename: Base name for output files (no extension).
-    """
     if not records:
         logger.info("No records to save.")
         return
@@ -87,6 +69,7 @@ examples:
   python main.py
   python main.py --input /path/to/invoices/
   python main.py --input /path/to/invoices/ --output /path/to/results/
+  python main.py --log-level DEBUG
         """,
     )
     parser.add_argument(
@@ -101,6 +84,13 @@ examples:
         metavar="DIR",
         help="Directory for JSON/CSV results (default: output/)",
     )
+    parser.add_argument(
+        "--log-level",
+        default="INFO",
+        metavar="LEVEL",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        help="Logging verbosity (default: INFO)",
+    )
     return parser.parse_args()
 
 
@@ -109,12 +99,18 @@ examples:
 # ---------------------------------------------------------------------------
 
 
+logger = logging.getLogger(__name__)
+
+
 def main() -> None:
-    """
-    Discovers PDF invoices in the input directory, parses each one,
-    and writes consolidated results to the output directory.
-    """
     args = parse_args()
+
+    logging.basicConfig(
+        level=getattr(logging, args.log_level),
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+
     input_dir = args.input
     output_dir = args.output
 
